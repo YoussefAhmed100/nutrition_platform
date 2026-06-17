@@ -27,31 +27,32 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthResponseDto> {
-    const existing = await this.usersRepository.findByEmail(dto.email);
-    if (existing) {
-      throw new ConflictException('User already exists');
-    }
-
-    const user = await this.usersRepository.create(dto);
-
-    const tokens = generateTokens(
-      user._id.toString(),
-      this.jwtService,
-      this.configService,
-    );
-
-    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
-
-    await this.usersRepository.updateById(user._id.toString(), {
-      refreshToken: hashedRefreshToken,
-    });
-
-    return {
-      user: UserResponseDto.fromEntity(user),
-      accessToken: tokens.accessToken,
-    };
+async register(dto: RegisterDto): Promise<AuthResponseDto> {
+  const existing = await this.usersRepository.findByEmail(dto.email);
+  if (existing) {
+    throw new ConflictException('User already exists');
   }
+
+  const user = await this.usersRepository.create(dto);
+
+  const tokens = await generateTokens(
+    user._id.toString(),
+    user.role,
+    this.jwtService,
+    this.configService,
+  );
+
+  const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
+
+  await this.usersRepository.updateById(user._id.toString(), {
+    refreshToken: hashedRefreshToken,
+  });
+
+  return {
+    user: UserResponseDto.fromEntity(user),
+    accessToken: tokens.accessToken,
+  };
+}
 
   // Login
 
@@ -75,12 +76,13 @@ export class AuthService {
     }
 
     // 4. JWT GENERATION
-    const tokens = generateTokens(
+    const tokens =  await generateTokens(
       user._id.toString(),
+      user.role,
       this.jwtService,
       this.configService,
     );
-    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
+   const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
     await this.usersRepository.updateById(user._id.toString(), {
       refreshToken: hashedRefreshToken,
     });

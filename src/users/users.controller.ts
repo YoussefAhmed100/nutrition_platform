@@ -38,21 +38,19 @@ import { Public } from 'src/common/decorators/public.decorator';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
   @ApiOperation({ summary: 'create new user' })
   @ApiCreatedResponse({ description: 'User created successfully' })
   @Post('create')
   @UseInterceptors(FilesInterceptor('images', 1))
   create(
     @Body() dto: CreateUserDto,
-    @UploadedFiles() files: Express.Multer.File[],
+    
   ) {
-    return this.usersService.create(dto, files);
+    return this.usersService.create(dto);
   }
 
   @ApiOperation({ summary: 'Get all users' })
   @ApiOkResponse({ description: 'List of users' })
-  @Public()
   @Get()
   async findAll(@Query() query: BuildQueryDto) {
     return this.usersService.findAll(query);
@@ -71,7 +69,6 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user by id' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiOkResponse({ type: UserResponseDto })
- @Public()
   @Get(':id')
   async findOne(
     @Param('id', ParseObjectIdPipe) id: string,

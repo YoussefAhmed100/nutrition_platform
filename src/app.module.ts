@@ -13,6 +13,7 @@ import { StorageModule } from './common/storage/storage.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
+import { PlansModule } from './plans/plans.module';
 
 @Module({
   imports: [
@@ -55,6 +56,9 @@ import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
     UserModule,
   
     StorageModule,
+  
+    PlansModule,
+  
   
  
  

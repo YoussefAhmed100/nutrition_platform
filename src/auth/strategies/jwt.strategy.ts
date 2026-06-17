@@ -27,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 async validate(payload: any) {
   const user = await this.userModel
   .findById(payload.sub)
-  .select('_id email isActive passwordChangedAt')
+  .select('_id email role isActive passwordChangedAt')
   .lean();
 
   if (!user) {
