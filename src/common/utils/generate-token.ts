@@ -1,23 +1,35 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { StringValue } from 'ms';
+import { UserRole } from 'src/users/enums/roles.enum';
 
-export function generateTokens(
+
+export async function generateTokens(
   userId: string,
+  role: UserRole,
   jwtService: JwtService,
   configService: ConfigService,
 ) {
-  const payload = { sub: userId };
+  const payload = {
+    sub: userId,
+    role:role
+  };
 
-  const accessToken = jwtService.sign(payload);
+   const [accessToken, refreshToken] = await Promise.all([
+    jwtService.signAsync(payload, {
+      secret: configService.getOrThrow<string>('jwt.access.secret'),
+      expiresIn: configService.getOrThrow<StringValue>(
+        'jwt.access.expiresIn',
+      ),
+    }),
 
-  const refreshToken = jwtService.sign(payload, {
-    secret: configService.getOrThrow<string>('jwt.refresh.secret'),
-    expiresIn: configService.getOrThrow<StringValue>(
-      'jwt.refresh.expiresIn',
-    ),
-  });
-
+    jwtService.signAsync(payload, {
+      secret: configService.getOrThrow<string>('jwt.refresh.secret'),
+      expiresIn: configService.getOrThrow<StringValue>(
+        'jwt.refresh.expiresIn',
+      ),
+    }),
+  ]);
   return {
     accessToken,
     refreshToken,

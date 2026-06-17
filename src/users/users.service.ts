@@ -32,7 +32,6 @@ export class UsersService {
 
   async create(
     dto: CreateUserDto,
-    files: Express.Multer.File[],
   ): Promise<AuthResponseDto> {
     // 1. Check if user exists
     const existing = await this.usersRepository.findByEmail(dto.email);
@@ -40,16 +39,14 @@ export class UsersService {
       throw new ConflictException('Email already in use');
     }
 
-    const images = files?.length ? await this.imageService.upload(files) : [];
 
-    const user = await this.usersRepository.create({
-      ...dto,
-      images,
-    });
+    const user = await this.usersRepository.create(dto);
+  
 
     // 3. Generate tokens
-    const tokens = generateTokens(
+    const tokens = await generateTokens(
       user._id.toString(),
+      user.role,
       this.jwtService,
       this.configService,
     );
@@ -161,8 +158,9 @@ export class UsersService {
     user.password = dto.password;
     await this.usersRepository.save(user);
 
-    const newTokens = generateTokens(
+    const newTokens = await generateTokens(
       user._id.toString(),
+      user.role,
       this.jwtService,
       this.configService,
     );
