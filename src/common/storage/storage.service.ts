@@ -13,7 +13,7 @@ export class StorageService {
     private readonly provider: storageProviderInterface.IStorageProvider,
   ) {}
 
-  private readonly allowedFolders = ['users', 'locations', 'projects'];
+  private readonly allowedFolders = ['users', 'locations', 'projects','messages'];
 
   /**
    * Validate folder

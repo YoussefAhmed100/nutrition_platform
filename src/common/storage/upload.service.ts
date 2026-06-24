@@ -66,4 +66,20 @@ export class UploadService {
 
     return relevantParts.join('/').replace(/\.[^/.]+$/, '');
   }
+
+  async uploadChatFile(
+  file: Express.Multer.File,
+): Promise<string> {
+  if (!file) {
+    throw new BadRequestException('File is required');
+  }
+
+  return this.storageService.uploadSingle(
+    file,
+    'messages',
+    {
+      allowedTypes: ALLOWED_IMAGE_TYPES ,
+    },
+  );
+}
 }
