@@ -21,6 +21,8 @@ import { UploadQueueModule } from './upload-queue/upload-queue.module';
 import { BullModule } from '@nestjs/bullmq';
 import { WeightLogModule } from './weight-log/weight-log.module';
 import { PatientDashboardModule } from './patient-dashboard/patient-dashboard.module';
+import { ConversationsModule } from './conversations/conversations.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -87,6 +89,12 @@ import { PatientDashboardModule } from './patient-dashboard/patient-dashboard.mo
   
   
     PatientDashboardModule,
+  
+  
+    ConversationsModule,
+  
+  
+    MessagesModule,
   
   
  

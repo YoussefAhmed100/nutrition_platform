@@ -24,9 +24,6 @@ export class WeightLogService {
       userId: this.toObjectId(userId),
       weight,
     });
-
-  
-
   }
 
   async getWeightHistory(userId: string) {
@@ -35,8 +32,6 @@ export class WeightLogService {
         userId: new Types.ObjectId(userId),
       })
       .lean();
-
-
 
     return logs;
   }
