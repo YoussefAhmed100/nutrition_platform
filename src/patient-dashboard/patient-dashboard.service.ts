@@ -30,9 +30,7 @@ export class PatientDashboardService {
     private readonly weightLogService: WeightLogService,
   ) {}
 
-  // =========================
   // DASHBOARD ENTRY
-  // =========================
   async getDashboard(userId: string) {
     const userObjectId = this.safeObjectId(userId);
 
@@ -87,9 +85,8 @@ export class PatientDashboardService {
     };
   }
 
-  // =========================
   // AGGREGATION
-  // =========================
+
   async getMainDashboardData(userId: Types.ObjectId) {
     const [result] = await this.userProgramModel.aggregate([
       { $match: { userId } },
@@ -122,7 +119,9 @@ export class PatientDashboardService {
               },
             },
 
-            { $unwind: { path: '$exercise', preserveNullAndEmptyArrays: true } },
+            {
+              $unwind: { path: '$exercise', preserveNullAndEmptyArrays: true },
+            },
 
             {
               $group: {
@@ -166,9 +165,7 @@ export class PatientDashboardService {
     };
   }
 
-  // =========================
   // WEEKLY CALORIES
-  // =========================
   private buildWeeklyCalories(
     weeklyRaw: { calories: number; date: Date | string | null }[],
   ) {
@@ -197,9 +194,7 @@ export class PatientDashboardService {
     }));
   }
 
-  // =========================
   // START OF WEEK
-  // =========================
   private getStartOfWeek(date: Date): Date {
     const d = new Date(date);
     const day = d.getDay();
@@ -211,9 +206,8 @@ export class PatientDashboardService {
     return d;
   }
 
-  // =========================
   // SAFE OBJECT ID HANDLER
-  // =========================
+
   private safeObjectId(id: string): Types.ObjectId {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid user id');

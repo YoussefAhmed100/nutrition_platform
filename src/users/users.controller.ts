@@ -34,7 +34,7 @@ import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@Roles(UserRole.ADMIN)
+@Roles(UserRole.ADMIN,UserRole.DOCTOR)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
