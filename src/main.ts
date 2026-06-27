@@ -62,13 +62,10 @@ expressApp.set('trust proxy', 1);
    * CORS
    */
 app.enableCors({
-  origin: [
-    process.env.FRONTEND_URL,
-    
-  ],
+  origin: process.env.FRONTEND_URL,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
-  // credentials: true,
+  credentials: false, 
 });
 
   const reflector = app.get(Reflector);
