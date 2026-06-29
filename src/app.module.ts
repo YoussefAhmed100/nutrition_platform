@@ -24,6 +24,8 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
 import { ChatModule } from './gateway/chat.module';
 import { SubscriptionPlanModule } from './subscription-plan/subscription-plan.module';
+import { UserSubscriptionModule } from './user-subscription/user-subscription.module';
+import { PaymobModule } from './paymob/paymob.module';
 
 @Module({
   imports: [
@@ -96,6 +98,8 @@ import { SubscriptionPlanModule } from './subscription-plan/subscription-plan.mo
     MessagesModule,
     ChatModule,
     SubscriptionPlanModule,
+    UserSubscriptionModule,
+    PaymobModule,
   ],
 
   providers: [
