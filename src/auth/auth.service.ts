@@ -4,57 +4,56 @@ import {
   NotFoundException,
   Inject,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
-import { JwtService } from '@nestjs/jwt';
+
 
 import { USERS_REPOSITORY } from '../users/repositories/users.repository.interface';
 import type { IUsersRepository } from '../users/repositories/users.repository.interface';
 import type { LoginDto } from './dto/login.dto';
 import { UserResponseDto } from 'src/users/dto/user-response.dto';
-import { generateTokens } from 'src/common/utils/generate-token';
-import { ConfigService } from '@nestjs/config';
 import { AuthResponseDto } from 'src/users/dto/response.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { createHash, randomInt } from 'crypto';
+import { MailService } from 'src/mail/mail.service';
+import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import {  RESET_CODE_EXPIRES_MS } from 'src/common/constants/security.constants';
+import { AuthSessionService } from './services/auth-session.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(USERS_REPOSITORY)
     private readonly usersRepository: IUsersRepository,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+  private readonly authSessionService: AuthSessionService,
+    private readonly mailService: MailService,
   ) {}
 
+
+
+
+
+
 async register(dto: RegisterDto): Promise<AuthResponseDto> {
-  const existing = await this.usersRepository.findByEmail(dto.email);
-  if (existing) {
+  const existingUser = await this.usersRepository.findByEmail(dto.email);
+
+  if (existingUser) {
     throw new ConflictException('User already exists');
   }
 
   const user = await this.usersRepository.create(dto);
 
-  const tokens = await generateTokens(
-    user._id.toString(),
-    user.role,
-    this.jwtService,
-    this.configService,
-  );
+  const tokens = await this.authSessionService.createSession(user);
 
-  const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
-
-  await this.usersRepository.updateById(user._id.toString(), {
-    refreshToken: hashedRefreshToken,
-  });
-
-  return {
+ return {
     user: UserResponseDto.fromEntity(user),
     accessToken: tokens.accessToken,
-  };
+}
 }
 
-  // Login
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.usersRepository.findByEmailWithPassword(dto.email);
@@ -75,45 +74,130 @@ async register(dto: RegisterDto): Promise<AuthResponseDto> {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // 4. JWT GENERATION
-    const tokens =  await generateTokens(
-      user._id.toString(),
-      user.role,
-      this.jwtService,
-      this.configService,
+    
+   const tokens = await this.authSessionService.createSession(user);
+
+
+ return {
+    user: UserResponseDto.fromEntity(user),
+    accessToken: tokens.accessToken,
+}
+}
+
+  // Forgot Password
+
+async forgotPassword(
+  dto: ForgotPasswordDto,
+): Promise<{ message: string }> {
+
+  const user = await this.usersRepository.findByEmail(dto.email);
+
+  if (!user) {
+    throw new NotFoundException('No user found with this email');
+  }
+
+  const resetCode = randomInt(100000, 1000000).toString();
+
+  const hashedResetCode = createHash('sha256')
+    .update(resetCode)
+    .digest('hex');
+
+  user.passwordResetCode = hashedResetCode;
+  user.passwordResetExpires = new Date(Date.now() + RESET_CODE_EXPIRES_MS);
+  user.passwordResetVerified = false;
+
+  await this.usersRepository.save(user);
+
+  await this.mailService.sendResetPasswordEmail(
+    user.email,
+    user.fullName,
+    resetCode,
+  );
+ 
+
+  return {
+    message: 'Password reset code sent successfully.',
+  };
+}
+
+
+async verifyResetCode(
+  dto: VerifyResetCodeDto,
+): Promise<{ message: string }> {
+  const user = await this.usersRepository.findByEmailWithResetFields(
+    dto.email,
+  );
+
+  if (!user) {
+    throw new NotFoundException('No user found with this email');
+  }
+
+  if (user.passwordResetVerified) {
+    throw new BadRequestException(
+      'Reset code has already been verified.',
     );
-   const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
-    await this.usersRepository.updateById(user._id.toString(), {
-      refreshToken: hashedRefreshToken,
-    });
-
-    return {
-      user: UserResponseDto.fromEntity(user),
-      accessToken: tokens.accessToken,
-    };
   }
 
-  // Forgot Password 
+  const hashedResetCode = createHash('sha256')
+    .update(dto.code)
+    .digest('hex');
 
-  async forgotPassword(email: string): Promise<{ message: string }> {
-    const user = await this.usersRepository.findByEmail(email);
-    if (!user) throw new NotFoundException('No user found with this email');
-
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashed = crypto.createHash('sha256').update(resetCode).digest('hex');
-
-    user.passwordResetCode = hashed;
-    user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
-    user.passwordResetVerified = false;
-
-    await this.usersRepository.save(user);
-
-    // TODO: call email service here with resetCode
-
-    return { message: 'Reset code sent' };
+  if (user.passwordResetCode !== hashedResetCode) {
+    throw new BadRequestException('Invalid reset code');
   }
 
-  // Logout
+  if (
+    !user.passwordResetExpires ||
+    user.passwordResetExpires.getTime() < Date.now()
+  ) {
+    throw new BadRequestException('Reset code has expired');
+  }
+
+  user.passwordResetVerified = true;
+
+  await this.usersRepository.save(user);
+
+  return {
+    message: 'Reset code verified successfully.',
+  };
+}
+
+
+async resetPassword(
+  dto: ResetPasswordDto,
+): Promise<{ message: string }> {
+  const user = await this.usersRepository.findByEmailWithResetFields(
+    dto.email,
+  );
+
+  if (!user) {
+    throw new NotFoundException('No user found with this email');
+  }
+
+  if (!user.passwordResetVerified) {
+    throw new BadRequestException(
+      'Please verify your reset code first.',
+    );
+  }
+
+
+  // Change password
+  user.password = dto.newPassword;
+
+  // Clear forgot password state
+  user.passwordResetCode = undefined;
+  user.passwordResetExpires = undefined;
+  user.passwordResetVerified = false;
+
+  // Logout from all devices
+  user.refreshToken = undefined;
+
+  await this.usersRepository.save(user);
+
+  return {
+    message: 'Password reset successfully. Please login again.',
+  };
+}
 
   async logout(userId: string): Promise<{ message: string }> {
     const user = await this.usersRepository.findById(userId);
@@ -123,5 +207,14 @@ async register(dto: RegisterDto): Promise<AuthResponseDto> {
     await this.usersRepository.save(user);
 
     return { message: 'Logged out successfully' };
+  }
+
+  async getLoggedUser(userId: string) {
+    const user = await this.usersRepository.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    return {
+      user: UserResponseDto.fromEntity(user),
+    };
   }
 }

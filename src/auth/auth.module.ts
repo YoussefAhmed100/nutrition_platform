@@ -12,13 +12,18 @@ import { JwtStrategy } from 'src/auth/strategies/jwt.strategy';
 import { UploadService } from 'src/common/storage/upload.service';
 import { UsersRepository } from 'src/users/repositories/user.repository';
 import { USERS_REPOSITORY } from 'src/users/repositories/users.repository.interface';
+import { MailModule } from 'src/mail/mail.module';
+import { TokenService } from './services/token.service';
+import { AuthSessionService } from './services/auth-session.service';
 
 @Module({
   imports: [
     
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
+      
     ]),
+     
 
 
     JwtModule.registerAsync({
@@ -32,17 +37,19 @@ import { USERS_REPOSITORY } from 'src/users/repositories/users.repository.interf
         },
       }),
     }),
+
+    MailModule,
   ],
 
   controllers: [AuthController],
 
-  providers: [AuthService, JwtStrategy,UploadService, UsersRepository,
+  providers: [AuthService, JwtStrategy,UploadService, UsersRepository,TokenService,AuthSessionService,
      {
       provide: USERS_REPOSITORY,  
       useClass: UsersRepository,
     },
   ],
 
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, JwtModule,TokenService,AuthSessionService],
 })
 export class AuthModule {}
