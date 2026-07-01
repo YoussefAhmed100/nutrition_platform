@@ -30,6 +30,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserRole } from './enums/roles.enum';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -50,6 +51,7 @@ export class UsersController {
 
   @ApiOperation({ summary: 'Get all users' })
   @ApiOkResponse({ description: 'List of users' })
+  // @SkipThrottle()
   @Get()
   async findAll(@Query() query: BuildQueryDto) {
     return this.usersService.findAll(query);
